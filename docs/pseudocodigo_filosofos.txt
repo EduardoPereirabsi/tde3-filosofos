@@ -1,0 +1,306 @@
+═══════════════════════════════════════════════════════════════════════════════
+                    PSEUDOCÓDIGO - JANTAR DOS FILÓSOFOS
+                         (HIERARQUIA DE RECURSOS)
+═══════════════════════════════════════════════════════════════════════════════
+
+PROBLEMA:
+  5 filósofos sentados em mesa circular
+  5 garfos compartilhados (um entre cada par de filósofos)
+  Para comer: precisa de 2 garfos (esquerda E direita)
+  
+  PROTOCOLO INGÊNUO (COM DEADLOCK):
+    1. Pegar garfo da esquerda
+    2. Pegar garfo da direita
+    3. Comer
+    4. Soltar garfos
+    
+  PROBLEMA: Se todos pegarem esquerda ao mesmo tempo → DEADLOCK!
+
+═══════════════════════════════════════════════════════════════════════════════
+
+SOLUÇÃO: HIERARQUIA DE RECURSOS
+
+IDEIA CENTRAL:
+  • Numerar todos os garfos (0, 1, 2, 3, 4)
+  • Sempre pegar o garfo de MENOR índice PRIMEIRO
+  • Depois pegar o garfo de MAIOR índice
+  • Isso impõe uma ORDEM GLOBAL
+  • Elimina ESPERA CIRCULAR
+
+═══════════════════════════════════════════════════════════════════════════════
+
+DADOS:
+
+  N ← 5                               // Número de filósofos
+  Garfos[0..N-1]                      // Array de garfos (recursos)
+  
+  Para cada filósofo i (0 ≤ i < N):
+    garfo_esquerda ← i
+    garfo_direita ← (i + 1) mod N
+
+═══════════════════════════════════════════════════════════════════════════════
+
+ALGORITMO PARA CADA FILÓSOFO p:
+
+  // ═══ INICIALIZAÇÃO ═══
+  
+  left ← min(garfo_esquerda(p), garfo_direita(p))   // Menor índice
+  right ← max(garfo_esquerda(p), garfo_direita(p))  // Maior índice
+  
+  estado[p] ← "pensando"
+  vezes_comeu ← 0
+  
+  
+  // ═══ LOOP PRINCIPAL ═══
+  
+  LOOP INFINITO:
+  
+    // ─── FASE 1: PENSAR ───
+    pensar()
+    estado[p] ← "pensando"
+    aguardar_tempo_aleatorio()
+    
+    
+    // ─── FASE 2: COM FOME ───
+    estado[p] ← "com fome"
+    
+    
+    // ─── FASE 3: ADQUIRIR GARFOS (ORDEM IMPORTANTE!) ───
+    
+    // SEMPRE pegar o de MENOR índice primeiro!
+    adquirir(Garfos[left])            // Bloqueia até disponível
+    
+    // Depois pegar o de MAIOR índice
+    adquirir(Garfos[right])           // Bloqueia até disponível
+    
+    
+    // ─── FASE 4: COMER ───
+    estado[p] ← "comendo"
+    comer()
+    aguardar_tempo_aleatorio()
+    vezes_comeu ← vezes_comeu + 1
+    
+    
+    // ─── FASE 5: LIBERAR GARFOS (ORDEM INVERSA) ───
+    liberar(Garfos[right])            // Liberar maior primeiro
+    liberar(Garfos[left])             // Depois liberar menor
+    
+    
+    // ─── FASE 6: VOLTAR A PENSAR ───
+    estado[p] ← "pensando"
+    
+  FIM_LOOP
+
+═══════════════════════════════════════════════════════════════════════════════
+
+EXEMPLO CONCRETO:
+
+  Filósofo 0:
+    garfo_esquerda = 0
+    garfo_direita = 1
+    left = min(0, 1) = 0
+    right = max(0, 1) = 1
+    Ordem: Garfo 0 → Garfo 1
+
+  Filósofo 1:
+    garfo_esquerda = 1
+    garfo_direita = 2
+    left = min(1, 2) = 1
+    right = max(1, 2) = 2
+    Ordem: Garfo 1 → Garfo 2
+
+  Filósofo 2:
+    garfo_esquerda = 2
+    garfo_direita = 3
+    left = min(2, 3) = 2
+    right = max(2, 3) = 3
+    Ordem: Garfo 2 → Garfo 3
+
+  Filósofo 3:
+    garfo_esquerda = 3
+    garfo_direita = 4
+    left = min(3, 4) = 3
+    right = max(3, 4) = 4
+    Ordem: Garfo 3 → Garfo 4
+
+  Filósofo 4:
+    garfo_esquerda = 4
+    garfo_direita = 0           ← Volta ao início (circular)
+    left = min(4, 0) = 0        ←  IMPORTANTE!
+    right = max(4, 0) = 4
+    Ordem: Garfo 0 → Garfo 4    Mesma direção que F0!
+
+═══════════════════════════════════════════════════════════════════════════════
+
+POR QUE FUNCIONA?
+
+  PROTOCOLO INGÊNUO (COM DEADLOCK):
+    F0: G0 → G1
+    F1: G1 → G2
+    F2: G2 → G3
+    F3: G3 → G4
+    F4: G4 → G0  ← Fecha o ciclo! F4→F0→F1→F2→F3→F4 (CICLO!)
+
+  COM HIERARQUIA (SEM DEADLOCK):
+    F0: G0 → G1
+    F1: G1 → G2
+    F2: G2 → G3
+    F3: G3 → G4
+    F4: G0 → G4  ← Mesma direção! Sem ciclo!
+
+  Não pode existir ciclo porque todos seguem direção: menor → maior
+
+═══════════════════════════════════════════════════════════════════════════════
+
+ANÁLISE DAS CONDIÇÕES DE COFFMAN:
+
+  1. EXCLUSÃO MÚTUA:  Ainda presente
+     • Um garfo só pode ser usado por um filósofo
+     • Necessária para proteger o recurso
+
+  2. MANTER-E-ESPERAR:  Ainda presente
+     • Filósofo segura um garfo e aguarda outro
+     • Mas na ordem correta
+
+  3. NÃO PREEMPÇÃO:  Ainda presente
+     • Garfo não pode ser tomado à força
+     • Filósofo libera voluntariamente
+
+  4. ESPERA CIRCULAR:  REMOVIDA!
+     • Ordem global evita ciclos
+     • Não existe F0→F1→...→F4→F0
+     • Apenas fila linear de espera
+
+  CONCLUSÃO: Basta quebrar UMA condição para evitar deadlock!
+
+═══════════════════════════════════════════════════════════════════════════════
+
+GARANTIAS:
+
+   Livre de Deadlock (Deadlock-Free)
+     • Impossível ter ciclo de dependências
+     • Ordem global garante progresso
+
+   Livre de Starvation (Starvation-Free) *
+     • Se usar locks justos (fair locks)
+     • Todos eventualmente conseguem comer
+
+   Progresso Garantido
+     • Sistema sempre avança
+     • Pelo menos um filósofo pode comer
+
+   Trade-off: Contenção
+     • Pode haver espera (serialização)
+     • Mas sem travamento
+
+═══════════════════════════════════════════════════════════════════════════════
+
+PSEUDOCÓDIGO COMPLETO (VERSÃO EXPANDIDA):
+
+ESTRUTURAS:
+
+  TYPE Garfo:
+    id: inteiro
+    disponivel: booleano
+    dono: inteiro | null
+  END_TYPE
+
+  TYPE Filosofo:
+    id: inteiro
+    estado: {"pensando", "com_fome", "comendo"}
+    garfo_left: referência_para_Garfo
+    garfo_right: referência_para_Garfo
+    vezes_comeu: inteiro
+  END_TYPE
+
+
+PROCEDIMENTO inicializar():
+
+  // Criar garfos
+  PARA i DE 0 ATÉ N-1:
+    Garfos[i] ← NOVO Garfo com id=i, disponivel=true, dono=null
+  FIM_PARA
+
+  // Criar filósofos
+  PARA p DE 0 ATÉ N-1:
+    garfo_esq ← Garfos[p]
+    garfo_dir ← Garfos[(p + 1) mod N]
+    
+    // Determinar ordem (hierarquia)
+    SE garfo_esq.id < garfo_dir.id ENTÃO:
+      left ← garfo_esq
+      right ← garfo_dir
+    SENÃO:
+      left ← garfo_dir
+      right ← garfo_esq
+    FIM_SE
+    
+    Filosofos[p] ← NOVO Filosofo com:
+      id = p
+      estado = "pensando"
+      garfo_left = left
+      garfo_right = right
+      vezes_comeu = 0
+    
+    CRIAR_THREAD(vida_filosofo, Filosofos[p])
+  FIM_PARA
+
+FIM_PROCEDIMENTO
+
+
+PROCEDIMENTO vida_filosofo(f: Filosofo):
+
+  LOOP INFINITO:
+  
+    // Pensar
+    f.estado ← "pensando"
+    EXIBIR("Filósofo", f.id, "está pensando")
+    DORMIR(aleatorio(500, 2000))
+    
+    // Com fome
+    f.estado ← "com_fome"
+    EXIBIR("Filósofo", f.id, "está com fome")
+    
+    // Adquirir garfos (ORDEM HIERÁRQUICA!)
+    EXIBIR("Filósofo", f.id, "tentando pegar garfo", f.garfo_left.id)
+    adquirir_lock(f.garfo_left)
+    EXIBIR("Filósofo", f.id, "pegou garfo", f.garfo_left.id)
+    
+    EXIBIR("Filósofo", f.id, "tentando pegar garfo", f.garfo_right.id)
+    adquirir_lock(f.garfo_right)
+    EXIBIR("Filósofo", f.id, "pegou garfo", f.garfo_right.id)
+    
+    // Comer
+    f.estado ← "comendo"
+    EXIBIR("Filósofo", f.id, "está comendo")
+    DORMIR(aleatorio(500, 2000))
+    f.vezes_comeu ← f.vezes_comeu + 1
+    
+    // Liberar garfos
+    liberar_lock(f.garfo_right)
+    EXIBIR("Filósofo", f.id, "soltou garfo", f.garfo_right.id)
+    
+    liberar_lock(f.garfo_left)
+    EXIBIR("Filósofo", f.id, "soltou garfo", f.garfo_left.id)
+    
+  FIM_LOOP
+
+FIM_PROCEDIMENTO
+
+
+PROCEDIMENTO adquirir_lock(garfo: Garfo):
+  ENQUANTO garfo.disponivel = false:
+    AGUARDAR()                        // Thread bloqueia
+  FIM_ENQUANTO
+  garfo.disponivel ← false
+  garfo.dono ← thread_atual
+FIM_PROCEDIMENTO
+
+
+PROCEDIMENTO liberar_lock(garfo: Garfo):
+  garfo.disponivel ← true
+  garfo.dono ← null
+  NOTIFICAR_THREADS_ESPERANDO()
+FIM_PROCEDIMENTO
+
+═══════════════════════════════════════════════════════════════════════════════
